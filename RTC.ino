@@ -1,12 +1,15 @@
+//Edited by Nicole Siron
+//source: looking for original sorce 
+//Note: Have to edit time the code runs
 
 #include "Wire.h"
 #define DS1307_ADDRESS 0x68
-byte zero = 0x00; //workaround for issue #527
+byte zero = 0x00; 
 
 void setup(){
   Wire.begin();
   Serial.begin(9600);
-  setDateTime(); //MUST CONFIGURE IN FUNCTION
+  setDateTime(); 
 }
 
 void loop(){
@@ -68,7 +71,7 @@ void printDate(){
   int month = bcdToDec(Wire.read());
   int year = bcdToDec(Wire.read());
 
-  //print the date EG   3/1/11 23:59:59
+  
   Serial.print(month);
   Serial.print("/");
   Serial.print(monthDay);
