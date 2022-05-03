@@ -1,6 +1,6 @@
 //Edited by Nicole Siron
-//source: looking for original sorce 
-//Note: Have to edit time the code runs
+//source: looking for original source 
+//Note: Have to edit the time every time the code runs
 
 #include "Wire.h"
 #define DS1307_ADDRESS 0x68
