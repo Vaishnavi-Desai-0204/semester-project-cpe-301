@@ -247,7 +247,7 @@ void fan_control(){
   }
 
 void servo_motor (){
-  val = adc_read(2);
+  val = adc_read(2); // pin A2
   val= map(val , 0 , 1023, 0 , 180);
   myservo.write(val);
 
@@ -257,7 +257,7 @@ void servo_motor (){
 double Water_level()
 {
   // get the reading from the ADC
-  unsigned int adc_reading = adc_read(1);
+  unsigned int adc_reading = adc_read(1); // pin A1
   return adc_reading;
 }
 
