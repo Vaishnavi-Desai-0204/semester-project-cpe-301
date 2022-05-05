@@ -1,34 +1,34 @@
-#include "DHT.h"
-#include <LiquidCrystal.h>
-#include <Servo.h>
-
-#define ENABLE 13
-#define DIRA 12
-#define DIRB 11
-
 
 // Include required libraries
 #include <Wire.h>
 #include <TimeLib.h>
 #include <DS1307RTC.h>
+#include "DHT.h"
+#include <LiquidCrystal.h>
+#include <Servo.h>
 
-int state = LOW;      // the current state of the output pin
+#define ENABLE 13 //fan setup
+#define DIRA 12
+#define DIRB 11
+
+int state = LOW;  // the current state of the output pin   
 int reading;    // the current reading from the input pin
 int previous = HIGH;    // the previous reading from the input pin
 
-int reset;
+int reset; 
 
-int printed_disabled = false;
+int printed_disabled = false;  // variables to hold value if the statements in that state have alreday been printed 
 int printed_idle = false;
 int printed_running  = false;
 int printed_error = false;
 
+double new_value= 0;
+ 
+float Temp_Threshold = 75; 
+float Water_Threshold = 250;
 
 // Define constant for RTC I2C Address
 #define DS1307_CTRL_ID 0x68
- 
-float Temp_Threshold = 75;
-float Water_Threshold = 250;
 
 #define DHTPIN A3
 #define DHTTYPE DHT11 
@@ -39,6 +39,7 @@ int val;
 int button = 0;
 LiquidCrystal lcd(22, 23, 24, 25, 26, 27);
 
+//// Definitions for the adc setup
 volatile unsigned char* my_ADMUX = (unsigned char*) 0x7C;
 volatile unsigned char* my_ADCSRB = (unsigned char*) 0x7B;
 volatile unsigned char* my_ADCSRA = (unsigned char*) 0x7A;
@@ -58,21 +59,25 @@ long time = 0;         // the last time the output pin was toggled
 long debounce = 200;   // the debounce time, increase if the output flickers
 
 void setup() {
-    lcd.begin(16, 2);
-    adc_init(); // setup the ADC
-    dht.begin();
-      myservo.attach(6);
-    *ddr_b = B11101111;  // output for the LED pins and the fan ; 
+   lcd.begin(16, 2);
+   
+   adc_init(); // setup the ADC
+   
+   dht.begin();
+   
+   myservo.attach(6);
+   
+  *ddr_b = B11101111;  // output for the LED pins and the fan ; 
+  *ddr_d = B11110010; //PIN 18 nad 19 are inputs for the buttons.
 
-    *ddr_d = B11110010; //PIN 18 nad 19 are inputs for the buttons.
+  attachInterrupt(digitalPinToInterrupt(18),handleInt,CHANGE);  //interrupt for the start/stop buttton
+  attachInterrupt(digitalPinToInterrupt(19),handleInt2,CHANGE); //interrupt for the reset button
   
-   attachInterrupt(digitalPinToInterrupt(18),handleInt,CHANGE);  //interrupt for the start/stop buttton
-    attachInterrupt(digitalPinToInterrupt(19),handleInt2,CHANGE); //interrupt for the reset button
-    Serial.begin(9600);  
+  Serial.begin(9600);  
 }
 
 void loop() {
-  if (reading == HIGH && previous == LOW && millis() - time > debounce) {
+  if (reading == HIGH && previous == LOW && millis() - time > debounce) {   // executed after on/off butoon interrupt to change states
       if (state == HIGH){
       state = LOW;
       Serial.print("OFF\n");
@@ -88,7 +93,7 @@ void loop() {
 
    if(state == LOW){
       disabled_state();
-     }
+    }
      
    else if(state == HIGH){
      if (Water_level() > Water_Threshold && DHT_sensor() < Temp_Threshold){
@@ -103,117 +108,101 @@ void loop() {
        
       error_state();
      }
-   }
-
-   
+   }   
 }
 
 // Interrupt Handler
 void handleInt() {
-  reading = HIGH;
+  reading = HIGH;  //Interrupt handler for the on/off utton
 }
 
 void handleInt2() {
-  reset = HIGH;
+  reset = HIGH;  //Iterrupt handler for the reset button
 }
 
 void disabled_state(){
 
-   printed_idle = false;
-   printed_running  = false;
-   printed_error = false;
-  if (printed_disabled == false){
-  Serial.println("DISABLED State");
-  printCurrentTime();
-  printed_disabled = true;
+  printed_idle = false; //set all the other state variables as false so they can be printed next time the other states are executed 
+  printed_running  = false; 
+  printed_error = false;
+  if (printed_disabled == false){  // prints name of the state and time only once , i.e every time the state is executed
+    Serial.println("DISABLED State");
+    printCurrentTime();
+    printed_disabled = true;
   }
  
   *port_b &= B00000100;
-  *port_b |= B00000100;
+  *port_b |= B00000100; // turn of all other LEDs and turn on Yellow LED
 
-
- 
-  lcd.clear();  
+  lcd.clear();   // no display on LED
 }
 
 void idle_state(){
   printed_disabled = false;
-
-printed_running  = false;
- printed_error = false;
-    if (printed_idle == false){
-  Serial.println("IDLE State");
-  printCurrentTime();
-  printed_idle = true;
+  printed_running  = false;
+  printed_error = false;
+  if (printed_idle == false){   // prints name of the state and time only once , i.e every time the state is executed
+    Serial.println("IDLE State");
+    printCurrentTime();
+    printed_idle = true;
   }
   
   *port_b &= B00001000;
-  *port_b |= B00001000;
+  *port_b |= B00001000; // turn of all other LEDs and turn on Green LED
 
-   DHT_sensor();
-   servo_motor();
-
-
-  
+   DHT_sensor();  // turn on LCD monitor for temperature and humidity
+   servo_motor(); //turn on vent control
 }
 
 void running_state(){
-   printed_disabled = false;
-
- printed_idle  = false;
- printed_error = false;
-    if (printed_running == false){
-  Serial.println("RUNNING State");
-  printCurrentTime();
-  printed_running =  true;
-  }
-
- 
-  DHT_sensor();  
-  *port_b &= B11100001;
+  printed_disabled = false;
+  printed_idle  = false;
+  printed_error = false;
+  if (printed_running == false){
+    Serial.println("RUNNING State");
+    printCurrentTime();
+    printed_running =  true;
+}
+  *port_b &= B11100001;  // turn of all other LEDs and turn on Blue LED
   *port_b |= B00000001;
-  fan_control();
-  servo_motor();
-
  
+  DHT_sensor();  // turn on LCD monitor for temperature and humidity
+  fan_control(); // turn on fan
+  servo_motor(); //turn on vent control
 }
 
 void error_state(){
-   printed_disabled = false;
-
- printed_running  = false;
- printed_idle = false;
-   LCD_error();
-   if(printed_error == false){
+  printed_disabled = false;
+  printed_running  = false;
+  printed_idle = false;
+  if(printed_error == false){
     Serial.println("ERROR State");
-  printCurrentTime();
-  printed_error =  true;
+    printCurrentTime();
+    printed_error =  true;
   }
-
   *port_b &= B00000010;
-  *port_b |= B00000010;
+  *port_b |= B00000010;  // turn of all other LEDs and turn on Red LED
+  
+  LCD_error(); //print LCD error message
 
-
-
-  if(Water_level() > Water_Threshold && reset  == HIGH){
+  if(Water_level() > Water_Threshold && reset  == HIGH){  //if intreuppt is triggered then return to idle state if water level is above threshold
     idle_state();
     reset = LOW;
-  }
-  
+  }  
 }
 
-void LCD_error()
+void LCD_error() //print LCD error message
 {
   lcd.clear();
   lcd.setCursor (0,0);
   lcd.print("     ERROR");
-
   lcd.setCursor(0,1);
   lcd.print ("   LOW WATER");
 }
+
 float DHT_sensor(){
   float h = dht.readHumidity(); // Read humidity
-  float f = dht.readTemperature(true);
+  float f = dht.readTemperature(true); //Read temperature
    if (isnan(h) || isnan(f)) // Check if any reads failed and exit early (to try again).
   {
     Serial.println(F("Failed to read from DHT sensor!"));
@@ -222,8 +211,8 @@ float DHT_sensor(){
   return f;
 }
 
-void LCD_data(float h, float f)
-{
+
+void LCD_data(float h, float f){ // LCD display
   lcd.setCursor (0,0);
   lcd.print ("Humidity: ");
   lcd.print (h);
@@ -236,7 +225,7 @@ void LCD_data(float h, float f)
 }
 
 void fan_control(){
- *port_b |= B11110000; 
+ *port_b |= B11110000; //turning on fan
   
   }
 
@@ -244,8 +233,8 @@ void servo_motor (){
   val = adc_read(2); // pin A2
   val= map(val , 0 , 1023, 0 , 180);
   myservo.write(val);
-
-  delay(100);
+  print_once(val); // printing value of angle only if it has changed
+  delay(1000);
 }
 
 double Water_level()
@@ -285,6 +274,15 @@ tmElements_t tm;
     Serial.println();
     delay(500);
   }
+}
+
+void print_once(double value){ //to print value of anything only if it has changed, in this case used for servo motor angle
+
+  if(new_value != value){
+  new_value = value;
+  Serial.print("ANGLE:");
+  Serial.println(new_value);
+  }  
 }
 
 void adc_init()
