@@ -49,11 +49,6 @@ volatile unsigned char* port_b = (unsigned char*) 0x25; // Setting the port_b (d
 volatile unsigned char* ddr_b = (unsigned char*) 0x24;  // Setting the ddr_b (Data Direction Register) to address 0x24 (sets it as input or output)
 volatile unsigned char* pin_b = (unsigned char*) 0x23;  // Setting pin_b (Input Pin Address) to 0x23 (Reading a value from a pin)
 
-// K register
-volatile unsigned char* pin_k = (unsigned char*) 0x106;
-volatile unsigned char* ddr_k = (unsigned char*) 0x107;
-volatile unsigned char* port_k = (unsigned char*) 0x108;
-
 //D register
 volatile unsigned char* pin_d = (unsigned char*) 0x09;
 volatile unsigned char* ddr_d = (unsigned char*) 0x0A;
@@ -67,12 +62,11 @@ void setup() {
     adc_init(); // setup the ADC
     dht.begin();
       myservo.attach(6);
-    *ddr_b = B11101111;  // output for the LED pins and the fan
+    *ddr_b = B11101111;  // output for the LED pins and the fan ; 
 
-    *ddr_d = B11110010;
+    *ddr_d = B11110010; //PIN 18 nad 19 are inputs for the buttons.
   
-    *ddr_k = B11111110; 
-    attachInterrupt(digitalPinToInterrupt(18),handleInt,CHANGE);  //interrupt for the start/stop buttton
+   attachInterrupt(digitalPinToInterrupt(18),handleInt,CHANGE);  //interrupt for the start/stop buttton
     attachInterrupt(digitalPinToInterrupt(19),handleInt2,CHANGE); //interrupt for the reset button
     Serial.begin(9600);  
 }
