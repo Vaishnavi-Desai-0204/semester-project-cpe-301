@@ -67,13 +67,13 @@ void setup() {
     adc_init(); // setup the ADC
     dht.begin();
       myservo.attach(6);
-    *ddr_b = B11101111;
+    *ddr_b = B11101111;  // output for the LED pins and the fan
 
     *ddr_d = B11110010;
   
-    *ddr_k = B11111110;
-    attachInterrupt(digitalPinToInterrupt(18),handleInt,CHANGE);
-    attachInterrupt(digitalPinToInterrupt(19),handleInt2,CHANGE);
+    *ddr_k = B11111110; 
+    attachInterrupt(digitalPinToInterrupt(18),handleInt,CHANGE);  //interrupt for the start/stop buttton
+    attachInterrupt(digitalPinToInterrupt(19),handleInt2,CHANGE); //interrupt for the reset button
     Serial.begin(9600);  
 }
 
